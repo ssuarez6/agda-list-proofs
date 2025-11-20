@@ -81,6 +81,7 @@ x ≤* [] = ⊤
 x ≤* (y ∷ l) = (x ≤ y) × (x ≤* l)
 
 -- Sorted as structural recursive function
+-- A list is sorted if head ≤* tail and tail is sorted
 sorted : (l : List ℕ) → Set
 sorted [] = ⊤
 sorted (x ∷ l) = (x ≤* l) × sorted l
