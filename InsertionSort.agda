@@ -4,6 +4,7 @@ open import Data.List using (List; []; _∷_)
 open import Data.Nat using (ℕ; _≤_; _≤ᵇ_; z≤n; s≤s)
 open import Data.Bool using (Bool; true; false)
 
+-- Insertion sort definition
 insert : ℕ → List ℕ → List ℕ
 insert x [] = x ∷ []
 insert x (y ∷ ys) with x ≤ᵇ y
@@ -14,7 +15,8 @@ insertionSort : List ℕ → List ℕ
 insertionSort []       = []
 insertionSort (x ∷ xs) = insert x (insertionSort xs)
 
--- Definición de Lista Ordernada
+-- Sorted List definition as a type
+-- Via the propositions-as-types correspondence
 data Sorted : List ℕ → Set where
   sorted-[]     : Sorted []
   sorted-single : (x : ℕ) → Sorted (x ∷ [])
@@ -28,8 +30,8 @@ proof-single = sorted-single 3
 
 proof-2-7 : Sorted (2 ∷ 7 ∷ [])
 proof-2-7 = sorted-cons 2 7 []
-                        (s≤s (s≤s z≤n))   -- Prueba de que 2≤7
-                        (sorted-single 7) -- Prueba de que (7 ∷ []) está ordenada
+                        (s≤s (s≤s z≤n))   -- Proof that 2 ≤ 7
+                        (sorted-single 7) -- Proof that [7 ∷ []] is sorted
 
 1≤3 : 1 ≤ 3
 1≤3 = s≤s z≤n
@@ -40,18 +42,12 @@ proof-2-7 = sorted-cons 2 7 []
 proof-1-3-8 : Sorted (1 ∷ 3 ∷ 8 ∷ [])
 proof-1-3-8 =
   sorted-cons 1 3 (8 ∷ [])
-    1≤3                      -- Prueba de que 1≤3
-    (sorted-cons 3 8 []      -- Prueba de que [3 ∷ 8 ∷ []] está ordenada
-      3≤8                    -- Prueba de que 3≤8
-      (sorted-single 8))     -- Prueba de que [8 ∷ []] está ordenada
+    1≤3                      -- Proof that 1 ≤ 3
+    (sorted-cons 3 8 []      -- Proof that [3 ∷ 8 ∷ []] is sorted
+      3≤8                    -- Proof that 3 ≤ 8
+      (sorted-single 8))     -- Proof thath [8 ∷ []] is sorted
 
-5≤2 : 5 ≤ 2
-5≤2 = ?
-
-proof-5-2 : Sorted (5 ∷ 2 ∷ [])
-proof-5-2 = sorted-cons 5 2 [] 5≤2 (sorted-single 2) 
-
--- Lema: Ejecutar insert de un elemento sobre una lista ordenada mantiene el orden
+-- Lemma: Executing `insert` of x over a sorted list maintains sorting
 insert-sorted : (x : ℕ) (xs : List ℕ) → Sorted xs → Sorted (insert x xs)
 insert-sorted x [] sorted-[] = sorted-single x
 --insert-sorted x  
@@ -62,14 +58,16 @@ insertionSort-sorted (x ∷ xs₁) =
   insert-sorted x (insertionSort xs₁) (insertionSort-sorted xs₁)  
 
 
--- Definición de Permutación
+-- Definition of Permutation
+-- Based on stdlib implementation
+-- https://agda.github.io/agda-stdlib/master/Data.List.Relation.Binary.Permutation.Declarative.html#1644
 data _~_ : List ℕ → List ℕ → Set where
-  perm-refl  : {xs : List ℕ} → xs ~ xs                                  -- Toda lista es permutación de si misma
-  perm-swap  : {x y : ℕ} {xs : List ℕ} → (x ∷ y ∷ xs) ~ (y ∷ x ∷ xs)    -- Intercambiar dos elementos da una permutación
-  perm-skip  : {x : ℕ} {xs ys : List ℕ} → xs ~ ys → (x ∷ xs) ~ (x ∷ ys) -- Añadir un elemento a ambos lados mantiene la permutación
-  perm-trans : {xs ys zs : List ℕ} → xs ~ ys → ys ~ zs → xs ~ zs        -- La permutación es transitiva
+  perm-refl  : {xs : List ℕ} → xs ~ xs                                  -- Every list is a permutation of itself
+  perm-swap  : {x y : ℕ} {xs : List ℕ} → (x ∷ y ∷ xs) ~ (y ∷ x ∷ xs)    -- Swapping two elements is a permutation
+  perm-skip  : {x : ℕ} {xs ys : List ℕ} → xs ~ ys → (x ∷ xs) ~ (x ∷ ys) -- Adding an element to two permutated lists maintains the permutation
+  perm-trans : {xs ys zs : List ℕ} → xs ~ ys → ys ~ zs → xs ~ zs        -- Transitivity of permutation
 
--- Ejemplos
+-- Examples
 ex1 : (1 ∷ 2 ∷ 3 ∷ []) ~ (1 ∷ 2 ∷ 3 ∷ [])
 ex1 = perm-refl
 
@@ -88,8 +86,7 @@ ex4 =
       (perm-skip perm-swap))  -- [3 ∷ 1 ∷ 2] ~ [3 ∷ 2 ∷ 1]
     
 
--- Ubicar un elemento `x` al principio de una lista `xs`
--- es una permutación de `insert x xs`
+-- Lemma: Executing `insert` of an element x in xs is a permutation of x∷xs
 insert-perm : (x : ℕ) (xs : List ℕ) → (x ∷ xs) ~ (insert x xs)
 insert-perm x [] = perm-refl
 insert-perm x (y ∷ ys) with x ≤ᵇ y
@@ -100,7 +97,7 @@ insert-perm x (y ∷ ys) with x ≤ᵇ y
     (perm-skip (insert-perm x ys))  -- [y ∷ x ∷ ...] ~ [y ∷ (insert x ys)]
 
 
--- Toda lista es permutación de su versión ordenada (por insertion sort)
+-- Main proof: Applying insertion sort produces a permutation
 insertion-sort-perm : (xs : List ℕ) → xs ~ (insertionSort xs)
 insertion-sort-perm []       = perm-refl
 insertion-sort-perm (x ∷ xs₁) =

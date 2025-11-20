@@ -1,5 +1,8 @@
 module ListProofs where
 
+-- Inspired by
+-- https://plfa.github.io/Lists/
+
 open import Agda.Builtin.Equality
 open import Agda.Builtin.Nat
 
@@ -18,7 +21,7 @@ trans : {A : Set} {x y z : A} → x ≡ y → y ≡ z → x ≡ z
 trans refl refl = refl
 
 data List (A : Set ) : Set  where
-  [] : List A
+  []   : List A
   _::_ : A → List A → List A
 
 consEq : (x : Nat) (xs : List Nat) → x :: xs ≡ x :: xs
@@ -32,12 +35,12 @@ emptyNotEqCons : {A : Set} (x : A) (xs : List A) → ¬ ([] ≡ x :: xs)
 emptyNotEqCons x xs ()
 
 length : List Nat → Nat
-length [] = 0
-length (x :: xs) = suc (length xs)
+length []        = 0
+length (_ :: xs) = suc (length xs)
 
 -- List concatenation
 _++_ : List Nat → List Nat → List Nat
-[] ++ ys = ys
+[]        ++ ys = ys
 (x :: xs) ++ ys = x :: (xs ++ ys)
 
 -- appending empty lists give the same list
