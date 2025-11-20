@@ -1,8 +1,11 @@
 module InsertionSort where
 
 open import Data.List using (List; []; _∷_)
-open import Data.Nat using (ℕ; _≤_; _≤ᵇ_; z≤n; s≤s)
+open import Data.Nat using (ℕ; _≤_; _≤ᵇ_; z≤n; s≤s; suc; zero)
 open import Data.Bool using (Bool; true; false)
+open import Data.Unit using (⊤; tt) public
+open import Data.Nat.Properties using (≤-trans) public
+open import Relation.Binary.PropositionalEquality using (_≡_; refl)
 
 -- Insertion sort definition
 insert : ℕ → List ℕ → List ℕ
@@ -14,48 +17,6 @@ insert x (y ∷ ys) with x ≤ᵇ y
 insertionSort : List ℕ → List ℕ
 insertionSort []       = []
 insertionSort (x ∷ xs) = insert x (insertionSort xs)
-
--- Sorted List definition as a type
--- Via the propositions-as-types correspondence
-data Sorted : List ℕ → Set where
-  sorted-[]     : Sorted []
-  sorted-single : (x : ℕ) → Sorted (x ∷ [])
-  sorted-cons   : (x y : ℕ) (ys : List ℕ) → x ≤ y → Sorted (y ∷ ys) → Sorted (x ∷ y ∷ ys)
-
-proof-empty : Sorted []
-proof-empty = sorted-[]
-
-proof-single : Sorted (3 ∷ [])
-proof-single = sorted-single 3
-
-proof-2-7 : Sorted (2 ∷ 7 ∷ [])
-proof-2-7 = sorted-cons 2 7 []
-                        (s≤s (s≤s z≤n))   -- Proof that 2 ≤ 7
-                        (sorted-single 7) -- Proof that [7 ∷ []] is sorted
-
-1≤3 : 1 ≤ 3
-1≤3 = s≤s z≤n
-
-3≤8 : 3 ≤ 8
-3≤8 = s≤s (s≤s (s≤s z≤n))
-
-proof-1-3-8 : Sorted (1 ∷ 3 ∷ 8 ∷ [])
-proof-1-3-8 =
-  sorted-cons 1 3 (8 ∷ [])
-    1≤3                      -- Proof that 1 ≤ 3
-    (sorted-cons 3 8 []      -- Proof that [3 ∷ 8 ∷ []] is sorted
-      3≤8                    -- Proof that 3 ≤ 8
-      (sorted-single 8))     -- Proof thath [8 ∷ []] is sorted
-
--- Lemma: Executing `insert` of x over a sorted list maintains sorting
-insert-sorted : (x : ℕ) (xs : List ℕ) → Sorted xs → Sorted (insert x xs)
-insert-sorted x [] sorted-[] = sorted-single x
---insert-sorted x  
-
-insertionSort-sorted : (xs : List ℕ) → Sorted (insertionSort xs)
-insertionSort-sorted []        = sorted-[]
-insertionSort-sorted (x ∷ xs₁) =
-  insert-sorted x (insertionSort xs₁) (insertionSort-sorted xs₁)  
 
 
 -- Definition of Permutation
@@ -105,3 +66,75 @@ insertion-sort-perm (x ∷ xs₁) =
     (perm-skip (insertion-sort-perm xs₁)) -- [x ∷ xs₁] ~ [x ∷ (insertionSort xs₁)] (H.I.) por perm-swap 
     (insert-perm x (insertionSort xs₁))   -- [x ∷ (insertionSort xs₁)] ~ (insert x (insertionSort xs₁))
 
+-- Product type
+record _×_ (A B : Set) : Set where
+  constructor _,_
+  field
+    proj₁ : A
+    proj₂ : B
+
+open _×_
+
+-- Less than all relation
+_≤*_ : (x : ℕ) → (list : List ℕ) → Set
+x ≤* [] = ⊤
+x ≤* (y ∷ l) = (x ≤ y) × (x ≤* l)
+
+-- Sorted as structural recursive function
+sorted : (l : List ℕ) → Set
+sorted [] = ⊤
+sorted (x ∷ l) = (x ≤* l) × sorted l
+
+-- Lemma: If x ≤ y and y ≤* zs then x ≤* zs
+≤*-trans : ∀ {x y zs} → x ≤ y → y ≤* zs → x ≤* zs
+≤*-trans {zs = []}     x≤y _             = tt
+≤*-trans {zs = z ∷ zs} x≤y (y≤z , y≤*zs) = (≤-trans x≤y y≤z) , (≤*-trans x≤y y≤*zs)
+
+-- Lemma: If z ≤ x and z ≤* ys then z ≤* (insert x ys)
+≤*-insert : ∀ {x z ys} → z ≤ x → z ≤* ys → z ≤* (insert x ys)
+≤*-insert {x} {z} {[]} z≤x _ = z≤x , tt
+≤*-insert {x} {z} {y ∷ ys} z≤x (z≤y , z≤*ys) with x ≤ᵇ y
+... | true  = z≤x , (z≤y , z≤*ys)               -- x is the new head
+... | false = z≤y , (≤*-insert z≤x z≤*ys) -- y is still the head, recurse
+
+
+-- Relation between decidable ≤ᵇ and type ≤
+≤ᵇ-true→≤ : ∀ {x y} → (x ≤ᵇ y) ≡ true → x ≤ y
+≤ᵇ-true→≤ {zero}  {y}     eq = z≤n
+≤ᵇ-true→≤ {suc x} {zero}  () -- Impossible case: true ≡ false
+≤ᵇ-true→≤ {suc x} {suc y} eq = s≤s (≤ᵇ-true→≤ eq)
+
+≤ᵇ-false→≤ : ∀ {x y} → (x ≤ᵇ y) ≡ false → y ≤ x
+≤ᵇ-false→≤ {zero}  {y}     () -- Impossible case: true ≡ false
+≤ᵇ-false→≤ {suc x} {zero}  eq = z≤n
+≤ᵇ-false→≤ {suc x} {suc y} eq = s≤s (≤ᵇ-false→≤ eq)
+
+-- Lemma: Inserting an `x` over a sorted list maintains sorting
+insert-sorted : (x : ℕ) (xs : List ℕ) → sorted xs → sorted (insert x xs)
+insert-sorted x [] _ = tt , tt    -- base case: sorted [x] is (x≤*[] , sorted [])
+
+insert-sorted x (y ∷ ys) (y≤*ys , s-ys) with x ≤ᵇ y
+... | true =
+  -- when x ≤ y the result is x ∷ y ∷ ys
+  -- goal: x ≤* (y ∷ ys) × sorted (y ∷ ys)
+  let
+    x≤y = ≤ᵇ-true→≤ refl
+    x≤*ys = ≤*-trans x≤y y≤*ys
+  in
+    (x≤y , x≤*ys) , (y≤*ys , s-ys)
+
+... | false =
+  -- when x > y the result is y ∷ insert x xs
+  -- goal: y ≤* (insert x ys) × sorted (insert x ys)
+  let
+    y≤x = ≤ᵇ-false→≤ refl
+    tail-srt = insert-sorted x ys s-ys
+    head-≤* = ≤*-insert y≤x y≤*ys
+  in
+    head-≤* , tail-srt
+
+
+insertionSort-sorted : (xs : List ℕ) → sorted (insertionSort xs)
+insertionSort-sorted [] = tt
+insertionSort-sorted (x ∷ xs₁) =
+  insert-sorted x (insertionSort xs₁) (insertionSort-sorted xs₁)
