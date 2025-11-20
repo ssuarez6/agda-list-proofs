@@ -18,6 +18,15 @@ insertionSort : List ℕ → List ℕ
 insertionSort []       = []
 insertionSort (x ∷ xs) = insert x (insertionSort xs)
 
+-- insertionSort (4 ∷ 5 ∷ 1 ∷ []) =
+--   insert 4 (insertionSort (5 ∷ 1 ∷ [])) =
+--   insert 4 (insert 5 (insertionSort (1 ∷ []))) =
+--   insert 4 (insert 5 (insert 1 [])) =
+--   insert 4 (insert 5 (1 ∷ [])) =
+--   insert 4 (1 ∷ (insert 5 [])) =
+--   insert 4 (1 ∷ (5 ∷ [])) =
+--   1 ∷ (insert 4 (5 ∷ [])) =
+--   1 ∷ 4 ∷ 5 ∷ []
 
 -- Definition of Permutation
 -- Based on stdlib implementation
@@ -82,6 +91,7 @@ x ≤* (y ∷ l) = (x ≤ y) × (x ≤* l)
 
 -- Sorted as structural recursive function
 -- A list is sorted if head ≤* tail and tail is sorted
+-- Based on a proof by ggzor (github) of the quicksort: https://github.com/ggzor/sorting-agda/blob/main/Sorting.agda
 sorted : (l : List ℕ) → Set
 sorted [] = ⊤
 sorted (x ∷ l) = (x ≤* l) × sorted l
